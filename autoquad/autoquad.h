@@ -34,6 +34,16 @@ extern "C" {
 // ENUM DEFINITIONS
 
 
+/** @brief Track current version of these definitions (can be used by checking value of AUTOQUAD_MAVLINK_DEFS_VERSION_ENUM_END). Append a new entry for each published change. */
+#ifndef HAVE_ENUM_AUTOQUAD_MAVLINK_DEFS_VERSION
+#define HAVE_ENUM_AUTOQUAD_MAVLINK_DEFS_VERSION
+typedef enum AUTOQUAD_MAVLINK_DEFS_VERSION
+{
+	AQ_MAVLINK_DEFS_VERSION_1=1, /*  | */
+	AUTOQUAD_MAVLINK_DEFS_VERSION_ENUM_END=2, /*  | */
+} AUTOQUAD_MAVLINK_DEFS_VERSION;
+#endif
+
 /** @brief Available operating modes/statuses for AutoQuad flight controller. 
 				Bitmask up to 32 bits. Low side bits for base modes, high side for 
 				additional active features/modifiers/constraints. */
@@ -42,12 +52,19 @@ extern "C" {
 typedef enum AUTOQUAD_NAV_STATUS
 {
 	AQ_NAV_STATUS_INIT=0, /* System is initializing | */
-	AQ_NAV_STATUS_STANDBY=1, /* System is standing by, not active | */
-	AQ_NAV_STATUS_MANUAL=2, /* Stabilized, under full manual control | */
+	AQ_NAV_STATUS_STANDBY=1, /* System is *armed* and standing by, with no throttle input and no autonomous mode | */
+	AQ_NAV_STATUS_MANUAL=2, /* Flying (throttle input detected), assumed under manual control unless other mode bits are set | */
 	AQ_NAV_STATUS_ALTHOLD=4, /* Altitude hold engaged | */
 	AQ_NAV_STATUS_POSHOLD=8, /* Position hold engaged | */
-	AQ_NAV_STATUS_DVH=16, /* Dynamic Velocity Hold is active | */
+	AQ_NAV_STATUS_GUIDED=16, /* Externally-guided (eg. GCS) navigation mode | */
 	AQ_NAV_STATUS_MISSION=32, /* Autonomous mission execution mode | */
+	AQ_NAV_STATUS_READY=256, /* Ready but *not armed* | */
+	AQ_NAV_STATUS_CALIBRATING=512, /* Calibration mode active | */
+	AQ_NAV_STATUS_NO_RC=4096, /* No valid control input (eg. no radio link) | */
+	AQ_NAV_STATUS_FUEL_LOW=8192, /* Battery is low (stage 1 warning) | */
+	AQ_NAV_STATUS_FUEL_CRITICAL=16384, /* Battery is depleted (stage 2 warning) | */
+	AQ_NAV_STATUS_DVH=16777216, /* Dynamic Velocity Hold is active (PH with proportional manual direction override) | */
+	AQ_NAV_STATUS_DAO=33554432, /* ynamic Altitude Override is active (AH with proportional manual adjustment) | */
 	AQ_NAV_STATUS_CEILING_REACHED=67108864, /* Craft is at ceiling altitude | */
 	AQ_NAV_STATUS_CEILING=134217728, /* Ceiling altitude is set | */
 	AQ_NAV_STATUS_HF_DYNAMIC=268435456, /* Heading-Free dynamic mode active | */
@@ -63,8 +80,8 @@ typedef enum AUTOQUAD_NAV_STATUS
 #define HAVE_ENUM_MAV_CMD
 typedef enum MAV_CMD
 {
+	MAV_CMD_AQ_NAV_LEG_ORBIT=1, /* Orbit a waypoint. |Orbit radius in meters| Loiter time in decimal seconds| Maximum horizontal speed in m/s| Desired yaw angle at waypoint| Latitude| Longitude| Altitude|  */
 	MAV_CMD_AQ_TELEMETRY=2, /* Start/stop AutoQuad telemetry values stream. |Start or stop (1 or 0)| Stream frequency in us| Dataset ID (refer to aq_mavlink.h::mavlinkCustomDataSets enum in AQ flight controller code)| Empty| Empty| Empty| Empty|  */
-	MAV_CMD_AQ_FOLLOW=3, /* Command AutoQuad to go to a particular place at a set speed. |Latitude| Lontitude| Altitude| Speed| Empty| Empty| Empty|  */
 	MAV_CMD_AQ_REQUEST_VERSION=4, /* Request AutoQuad firmware version number. |Empty| Empty| Empty| Empty| Empty| Empty| Empty|  */
 	MAV_CMD_NAV_WAYPOINT=16, /* Navigate to MISSION. |Hold time in decimal seconds. (ignored by fixed wing, time to stay at MISSION for rotary wing)| Acceptance radius in meters (if the sphere with this radius is hit, the MISSION counts as reached)| 0 to pass through the WP, if > 0 radius in meters to pass by WP. Positive value for clockwise orbit, negative value for counter-clockwise orbit. Allows trajectory control.| Desired yaw angle at MISSION (rotary wing)| Latitude| Longitude| Altitude|  */
 	MAV_CMD_NAV_LOITER_UNLIM=17, /* Loiter around this MISSION an unlimited amount of time |Empty| Empty| Radius around MISSION, in meters. If positive loiter clockwise, else counter-clockwise| Desired yaw angle.| Latitude| Longitude| Altitude|  */
@@ -143,7 +160,22 @@ typedef enum MAV_CMD
 	MAV_CMD_DO_VTOL_TRANSITION=3000, /* Request VTOL transition |The target VTOL state, as defined by ENUM MAV_VTOL_STATE. Only MAV_VTOL_STATE_MC and MAV_VTOL_STATE_FW can be used.|  */
 	MAV_CMD_PAYLOAD_PREPARE_DEPLOY=30001, /* Deploy payload on a Lat / Lon / Alt position. This includes the navigation to reach the required release position and velocity. |Operation mode. 0: prepare single payload deploy (overwriting previous requests), but do not execute it. 1: execute payload deploy immediately (rejecting further deploy commands during execution, but allowing abort). 2: add payload deploy to existing deployment list.| Desired approach vector in degrees compass heading (0..360). A negative value indicates the system can define the approach vector at will.| Desired ground speed at release time. This can be overriden by the airframe in case it needs to meet minimum airspeed. A negative value indicates the system can define the ground speed at will.| Minimum altitude clearance to the release position in meters. A negative value indicates the system can define the clearance at will.| Latitude unscaled for MISSION_ITEM or in 1e7 degrees for MISSION_ITEM_INT| Longitude unscaled for MISSION_ITEM or in 1e7 degrees for MISSION_ITEM_INT| Altitude, in meters AMSL|  */
 	MAV_CMD_PAYLOAD_CONTROL_DEPLOY=30002, /* Control the payload deployment. |Operation mode. 0: Abort deployment, continue normal mission. 1: switch to payload deploment mode. 100: delete first payload deployment request. 101: delete all payload deployment requests.| Reserved| Reserved| Reserved| Reserved| Reserved| Reserved|  */
-	MAV_CMD_ENUM_END=30003, /*  | */
+	MAV_CMD_WAYPOINT_USER_1=31000, /* User defined waypoint item. Ground Station will show the Vehicle as flying through this item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_WAYPOINT_USER_2=31001, /* User defined waypoint item. Ground Station will show the Vehicle as flying through this item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_WAYPOINT_USER_3=31002, /* User defined waypoint item. Ground Station will show the Vehicle as flying through this item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_WAYPOINT_USER_4=31003, /* User defined waypoint item. Ground Station will show the Vehicle as flying through this item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_WAYPOINT_USER_5=31004, /* User defined waypoint item. Ground Station will show the Vehicle as flying through this item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_SPATIAL_USER_1=31005, /* User defined spatial item. Ground Station will not show the Vehicle as flying through this item. Example: ROI item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_SPATIAL_USER_2=31006, /* User defined spatial item. Ground Station will not show the Vehicle as flying through this item. Example: ROI item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_SPATIAL_USER_3=31007, /* User defined spatial item. Ground Station will not show the Vehicle as flying through this item. Example: ROI item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_SPATIAL_USER_4=31008, /* User defined spatial item. Ground Station will not show the Vehicle as flying through this item. Example: ROI item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_SPATIAL_USER_5=31009, /* User defined spatial item. Ground Station will not show the Vehicle as flying through this item. Example: ROI item. |User defined| User defined| User defined| User defined| Latitude unscaled| Longitude unscaled| Altitude, in meters AMSL|  */
+	MAV_CMD_USER_1=31010, /* User defined command. Ground Station will not show the Vehicle as flying through this item. Example: MAV_CMD_DO_SET_PARAMETER item. |User defined| User defined| User defined| User defined| User defined| User defined| User defined|  */
+	MAV_CMD_USER_2=31011, /* User defined command. Ground Station will not show the Vehicle as flying through this item. Example: MAV_CMD_DO_SET_PARAMETER item. |User defined| User defined| User defined| User defined| User defined| User defined| User defined|  */
+	MAV_CMD_USER_3=31012, /* User defined command. Ground Station will not show the Vehicle as flying through this item. Example: MAV_CMD_DO_SET_PARAMETER item. |User defined| User defined| User defined| User defined| User defined| User defined| User defined|  */
+	MAV_CMD_USER_4=31013, /* User defined command. Ground Station will not show the Vehicle as flying through this item. Example: MAV_CMD_DO_SET_PARAMETER item. |User defined| User defined| User defined| User defined| User defined| User defined| User defined|  */
+	MAV_CMD_USER_5=31014, /* User defined command. Ground Station will not show the Vehicle as flying through this item. Example: MAV_CMD_DO_SET_PARAMETER item. |User defined| User defined| User defined| User defined| User defined| User defined| User defined|  */
+	MAV_CMD_ENUM_END=31015, /*  | */
 } MAV_CMD;
 #endif
 
