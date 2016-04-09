@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<mavlink>
+    <include>common.xml</include>
+    <!-- NOTE: If the included file already contains a version tag, remove the version tag here, else uncomment to enable. -->
+    <!--<version>3</version>-->
+    <enums>
+    </enums>
+    <messages>
+        <message id="150" name="SONAR">
+            <description>This message encodes the values from the sonar sensor connected to the ADC.</description>
+            <field type="uint64_t" name="usec">Timestamp (microseconds, synced to UNIX time or since system boot)</field>
+            <field type="uint16_t" name="id">The internal id of the sensor.</field>
+            <field type="int32_t" name="raw_value">The raw value from the sonar sensor read from the ADC.</field>
+            <field type="float" name="distance">The measured distance from the sonar sensor.</field>
+        </message>
+    </messages>
+</mavlink>
