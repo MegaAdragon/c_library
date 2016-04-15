@@ -13,5 +13,10 @@
             <field type="int32_t" name="raw_value">The raw value from the sonar sensor read from the ADC.</field>
             <field type="float" name="distance">The measured distance from the sonar sensor.</field>
         </message>
+        <message id="151" name="COLLISION">
+            <description>This message contains the filtered and calculated collision information.</description>
+            <field type="uint64_t" name="usec">Timestamp (microseconds, synced to UNIX time or since system boot)</field>
+            <field type="float" name="front">collision value in front of the drone.</field>
+        </message>
     </messages>
 </mavlink>
